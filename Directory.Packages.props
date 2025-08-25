@@ -101,7 +101,6 @@
     <PackageVersion Include="System.Runtime.Caching" Version="10.0.0-preview.7.25380.108" />
     <PackageVersion Include="System.ServiceProcess.ServiceController" Version="10.0.0-preview.7.25380.108" />
     <PackageVersion Include="System.Text.Encoding.CodePages" Version="10.0.0-preview.7.25380.108" />
-    <PackageVersion Include="System.Text.Json" Version="10.0.0-preview.7.25380.108" />
     <PackageVersion Include="System.Text.RegularExpressions" Version="4.3.1" />
     <PackageVersion Include="UnicodeInformation" Version="2.6.0" />
     <PackageVersion Include="UnitsNet" Version="5.56.0" />
