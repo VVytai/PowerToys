@@ -36,6 +36,8 @@
     <PackageReference Include="System.Text.Json" />
     <PackageReference Include="Microsoft.Web.WebView2" />
     <PackageReference Include="CommunityToolkit.Common" />
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" />
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\common\Common.UI\Common.UI.csproj" />

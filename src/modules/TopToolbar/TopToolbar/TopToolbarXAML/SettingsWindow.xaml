@@ -6,230 +6,290 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:winuiex="using:WinUIEx"
     xmlns:local="using:TopToolbar.Models"
+    xmlns:tkcontrols="using:CommunityToolkit.WinUI.Controls"
     mc:Ignorable="d"
-    Width="1000"
-    Height="700"
-    MinWidth="800"
-    MinHeight="600"
+    Width="1080"
+    Height="720"
+    MinWidth="960"
+    MinHeight="640"
     Title="Toolbar Settings">
 
     <Grid>
         <Grid.Resources>
-            <!-- Theme brushes hooking into system resources so dark/light auto adapt -->
-            <SolidColorBrush x:Key="ToolbarSurfaceBrush" Color="{ThemeResource LayerOnAcrylicFillColorDefault}" Opacity="0.85" />
-            <SolidColorBrush x:Key="ToolbarBorderBrush" Color="{ThemeResource CardStrokeColorDefault}" />
-            <SolidColorBrush x:Key="ToolbarHeaderForeground" Color="{ThemeResource TextFillColorPrimary}" />
-            <SolidColorBrush x:Key="ToolbarSecondaryForeground" Color="{ThemeResource TextFillColorSecondary}" />
-            <Thickness x:Key="PanelPadding">16,12,16,12</Thickness>
-            <CornerRadius x:Key="CardCornerRadius">8</CornerRadius>
-            <!-- Page background gradient brush (referenced by background layer Border). NOTE: cannot be used on this same Grid before resources are parsed -->
-            <LinearGradientBrush x:Key="PageBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="{ThemeResource LayerOnMicaBaseAltFillColorDefault}" Offset="0"/>
-                <GradientStop Color="{ThemeResource CardBackgroundFillColorSecondary}" Offset="1"/>
-            </LinearGradientBrush>
-            <Style x:Key="CardBorderStyle" TargetType="Border">
-                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
-                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
-                <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="CornerRadius" Value="{StaticResource CardCornerRadius}"/>
-                <Setter Property="Padding" Value="12"/>
+            <!-- Spacing tokens -->
+            <x:Double x:Key="SpacingXS">4</x:Double>
+            <x:Double x:Key="SpacingS">8</x:Double>
+            <x:Double x:Key="SpacingM">12</x:Double>
+            <x:Double x:Key="SpacingL">20</x:Double>
+
+            <!-- Unified SettingsCard appearance inside this window -->
+            <Style TargetType="tkcontrols:SettingsCard">
+                <Setter Property="Margin" Value="0,0,0,12" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="Padding" Value="14,10" />
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorSecondaryBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
             </Style>
-            <Style TargetType="Button" x:Key="AccentButtonSmall">
-                <Setter Property="Padding" Value="14,6"/>
-                <Setter Property="MinWidth" Value="84"/>
-                <Setter Property="HorizontalAlignment" Value="Left"/>
-                <Setter Property="CornerRadius" Value="4"/>
-            </Style>
-            <Style x:Key="FormLabelTextBlockStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyTextBlockStyle}">
-                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondary}"/>
-                <Setter Property="FontSize" Value="13"/>
-                <Setter Property="Padding" Value="0,8,8,8"/>
-                <Setter Property="VerticalAlignment" Value="Center"/>
-            </Style>
-            <Style x:Key="SectionHeaderTextBlockStyle" TargetType="TextBlock" BasedOn="{StaticResource SubtitleTextBlockStyle}">
-                <Setter Property="Margin" Value="0,8,0,4"/>
-                <Setter Property="FontWeight" Value="SemiBold"/>
-            </Style>
-            <!-- Subtle ListView item styling -->
-            <!-- Local ListViewItem style (avoid BasedOn missing key in isolated window) -->
-            <Style TargetType="ListViewItem" x:Key="ToolbarListItemStyle">
-                <Setter Property="Padding" Value="4"/>
-                <Setter Property="Margin" Value="0,0,0,4"/>
-                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+
+            <!-- List item style (shared) -->
+            <Style x:Key="ToolbarListItemStyle" TargetType="ListViewItem">
+                <Setter Property="Margin" Value="0,4,0,0" />
+                <Setter Property="Padding" Value="10,8" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListViewItem">
+                            <Grid x:Name="RootGrid" Background="{TemplateBinding Background}" CornerRadius="8">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <!-- Main content presenter -->
+                                <ContentPresenter
+                                    x:Name="ContentPresenter"
+                                    ContentTransitions="{TemplateBinding ContentTransitions}"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                    Margin="{TemplateBinding Padding}"
+                                    VerticalAlignment="Center" />
+                                <!-- Overlay accent stripe -->
+                                <Border x:Name="AccentStripe" Width="3" Margin="0,2,0,2" HorizontalAlignment="Left" VerticalAlignment="Stretch" CornerRadius="2" Background="Transparent" IsHitTestVisible="False" />
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Background" Value="{ThemeResource AccentFillColorTertiaryBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Background" Value="{ThemeResource AccentFillColorSecondaryBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Opacity" Value="0.5" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                    <VisualStateGroup x:Name="SelectionStates">
+                                        <VisualState x:Name="Unselected" />
+                                        <VisualState x:Name="Selected">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Background" Value="#FFF2F2F2" />
+                                                <Setter Target="AccentStripe.Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="SelectedPointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Background" Value="#FFF2F2F2" />
+                                                <Setter Target="AccentStripe.Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="SelectedPressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Background" Value="#FFE5E5E5" />
+                                                <Setter Target="AccentStripe.Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="SelectedUnfocused">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Background" Value="#FFF2F2F2" />
+                                                <Setter Target="AccentStripe.Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="SelectedDisabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Background" Value="#FFF2F2F2" />
+                                                <Setter Target="AccentStripe.Background" Value="{ThemeResource AccentFillColorTertiaryBrush}" />
+                                                <Setter Target="RootGrid.Opacity" Value="0.5" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
         </Grid.Resources>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-    <!-- Background layer using the gradient brush (placed before other content) -->
-    <Border Background="{StaticResource PageBackgroundBrush}"/>        
-
-    <!-- Custom Title bar region (draggable) -->
-        <Grid x:Name="AppTitleBar" Height="46" Background="#01FFFFFF" Margin="4,4,4,0">
+        <!-- Title bar (drag region) redesigned: compact, no Save button -->
+        <Grid x:Name="AppTitleBar" Height="44" Margin="4,4,4,0" Background="Transparent">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8" Margin="12,0,0,0">
-                <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE713;" Foreground="{ThemeResource TextFillColorPrimary}" />
-                <TextBlock Text="Toolbar Settings" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimary}"/>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10" Margin="14,0,0,0">
+                <Border Width="32" Height="32" CornerRadius="8" Background="{ThemeResource LayerOnAcrylicFillColorDefaultBrush}" VerticalAlignment="Center">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE713;" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Spacing="2" VerticalAlignment="Center">
+                    <TextBlock Text="Toolbar Settings" FontSize="16" FontWeight="SemiBold" />
+                    <TextBlock Text="Configuration" FontSize="12" Opacity="0.65" />
+                </StackPanel>
             </StackPanel>
         </Grid>
 
-        <!-- Main layout -->
-        <Grid Grid.Row="1" Padding="16,4,16,16">
+        <!-- Main two‑column layout -->
+        <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition x:Name="LeftPaneColumn" Width="0"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition x:Name="LeftPaneColumn" Width="300" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- Navigation / Groups -->
-            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,16,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <TextBlock Text="Groups" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="4,0,0,8"/>
-                    <ListView Grid.Row="1" x:Name="GroupsList" ItemsSource="{x:Bind ViewModel.Groups, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedGroup, Mode=TwoWay}" SelectionMode="Single" BorderThickness="0" ItemContainerStyle="{StaticResource ToolbarListItemStyle}">
-                        <ListView.ItemTemplate>
-                            <DataTemplate x:DataType="local:ButtonGroup">
-                                <Grid Padding="8,4">
-                                    <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" Spacing="8" Margin="0,12,0,0">
-                        <Button Content="新增" Click="OnAddGroup" Style="{StaticResource AccentButtonSmall}"/>
-                        <Button Content="删除" Click="OnRemoveSelectedGroup"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- Content area -->
-            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
-                <StackPanel Spacing="28">
-                    <!-- Action bar -->
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Orientation="Horizontal" Spacing="8" Grid.Column="1">
-                            <Button Content="显示/隐藏组" Click="OnToggleGroupsPane"/>
-                            <Button Content="保存" Click="OnSave" Style="{StaticResource AccentButtonStyle}"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <TextBlock Text="分组配置" Style="{StaticResource SectionHeaderTextBlockStyle}"/>
-
-                    <Grid x:Name="ConfigurationPanel" Visibility="{x:Bind ViewModel.HasSelectedGroup, Mode=OneWay}" RowSpacing="16" ColumnSpacing="12">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="140"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="名称" Style="{StaticResource FormLabelTextBlockStyle}"/>
-                        <TextBox Grid.Row="0" Grid.Column="1" Text="{x:Bind ViewModel.SelectedGroup.Name, Mode=TwoWay}"/>
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="启用" Style="{StaticResource FormLabelTextBlockStyle}"/>
-                        <ToggleSwitch Grid.Row="1" Grid.Column="1" IsOn="{x:Bind ViewModel.SelectedGroup.IsEnabled, Mode=TwoWay}"/>
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="描述" Style="{StaticResource FormLabelTextBlockStyle}" VerticalAlignment="Top"/>
-                        <TextBox Grid.Row="2" Grid.Column="1" Text="{x:Bind ViewModel.SelectedGroup.Description, Mode=TwoWay}" AcceptsReturn="True" TextWrapping="Wrap" Height="80"/>
-                    </Grid>
-
-                    <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.HasSelectedGroup, Mode=OneWay}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="按钮列表" Style="{StaticResource SectionHeaderTextBlockStyle}"/>
-                            <StackPanel Orientation="Horizontal" Spacing="8" Grid.Column="1">
-                                <Button Content="添加按钮" Click="OnAddButton" Tag="{x:Bind ViewModel.SelectedGroup}" Style="{StaticResource AccentButtonSmall}"/>
-                                <Button Content="删除按钮" Click="OnRemoveButton" Tag="{x:Bind ViewModel.SelectedButton}"/>
+            <!-- Left pane: group list + group properties cards -->
+            <ScrollViewer Grid.Column="0" HorizontalScrollMode="Disabled" VerticalScrollBarVisibility="Auto" Padding="0">
+                <Border Background="{ThemeResource LayerOnAcrylicFillColorDefaultBrush}" Padding="18,16,16,24" CornerRadius="14" Margin="8,8,0,12">
+                    <StackPanel Spacing="14">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+                            <TextBlock Text="Groups" FontSize="15" FontWeight="SemiBold" />
+                            <Rectangle Width="1" Height="18" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Opacity="0.35" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Content="Add" Click="OnAddGroup" />
+                                <Button Content="Remove" Click="OnRemoveSelectedGroup" IsEnabled="{x:Bind ViewModel.HasSelectedGroup, Mode=OneWay}" />
                             </StackPanel>
-                        </Grid>
-                        <ListView x:Name="ButtonsList" ItemsSource="{x:Bind ViewModel.SelectedGroup.Buttons, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedButton, Mode=TwoWay}" SelectionMode="Single" BorderThickness="0">
+                        </StackPanel>
+                        <ListView x:Name="GroupsList"
+                                  ItemsSource="{x:Bind ViewModel.Groups, Mode=OneWay}"
+                                  SelectedItem="{x:Bind ViewModel.SelectedGroup, Mode=TwoWay}"
+                                  SelectionMode="Single"
+                                  BorderThickness="0"
+                                  IsItemClickEnabled="True"
+                                  MinHeight="120"
+                                  ItemContainerStyle="{StaticResource ToolbarListItemStyle}">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="local:ButtonGroup">
+                                    <Grid ColumnSpacing="8" Padding="8,0,8,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" />
+                                        <ToggleSwitch Grid.Column="1" IsOn="{x:Bind IsEnabled, Mode=TwoWay}" MinWidth="0" HorizontalAlignment="Right" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                            <ListView.Resources>
+                                <Style TargetType="ListViewItem" BasedOn="{StaticResource ToolbarListItemStyle}">
+                                    <Setter Property="Padding" Value="4,6" />
+                                </Style>
+                            </ListView.Resources>
+                        </ListView>
+                        <!-- Group property cards -->
+                        <StackPanel Spacing="10" Visibility="{x:Bind ViewModel.HasSelectedGroup, Mode=OneWay}" Margin="0,6,0,0">
+                            <tkcontrols:SettingsCard Header="Group Name">
+                                <TextBox Text="{x:Bind ViewModel.SelectedGroup.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard Header="Enabled">
+                                <ToggleSwitch IsOn="{x:Bind ViewModel.SelectedGroup.IsEnabled, Mode=TwoWay}" />
+                            </tkcontrols:SettingsCard>
+                            <tkcontrols:SettingsCard Header="Description">
+                                <TextBox Text="{x:Bind ViewModel.SelectedGroup.Description, Mode=TwoWay}" AcceptsReturn="True" TextWrapping="Wrap" Height="80" />
+                            </tkcontrols:SettingsCard>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </ScrollViewer>
+
+            <!-- Divider line -->
+            <Border Grid.Column="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Opacity="0.4" />
+
+            <!-- Right pane: buttons + button details -->
+            <ScrollViewer Grid.Column="2" Padding="0" VerticalScrollBarVisibility="Auto">
+                <Border Background="{ThemeResource LayerOnAcrylicFillColorDefaultBrush}" CornerRadius="14" Padding="30,20,30,40" Margin="0,8,8,12">
+                    <StackPanel Spacing="26">
+                        <StackPanel Orientation="Horizontal" Spacing="10" Visibility="{x:Bind ViewModel.HasSelectedGroup, Mode=OneWay}" VerticalAlignment="Center">
+                            <TextBlock Text="Buttons" FontSize="15" FontWeight="SemiBold" />
+                            <Rectangle Width="1" Height="18" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Opacity="0.35" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Content="Add" Click="OnAddButton" Tag="{x:Bind ViewModel.SelectedGroup}" />
+                                <Button Content="Remove" Click="OnRemoveButton" Tag="{x:Bind ViewModel.SelectedButton}" IsEnabled="{x:Bind ViewModel.HasSelectedButton, Mode=OneWay}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <ListView x:Name="ButtonsList"
+                                  ItemsSource="{x:Bind ViewModel.SelectedGroup.Buttons, Mode=OneWay}"
+                                  SelectedItem="{x:Bind ViewModel.SelectedButton, Mode=TwoWay}"
+                                  SelectionMode="Single"
+                                  BorderThickness="0"
+                                  Visibility="{x:Bind ViewModel.HasSelectedGroup, Mode=OneWay}"
+                                  MinHeight="120"
+                                  ItemContainerStyle="{StaticResource ToolbarListItemStyle}">
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="local:ToolbarButton">
-                                    <Grid>
+                                    <Grid ColumnSpacing="8" Padding="8,0,8,0">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <ToggleSwitch Grid.Column="0" IsOn="{x:Bind IsEnabled, Mode=TwoWay}" Margin="0,0,8,0"/>
-                                        <TextBlock Grid.Column="1" Text="{x:Bind Name}" VerticalAlignment="Center" FontSize="14"/>
+                                        <ToggleSwitch Grid.Column="0" IsOn="{x:Bind IsEnabled, Mode=TwoWay}" />
+                                        <TextBlock Grid.Column="1" Text="{x:Bind Name}" VerticalAlignment="Center" />
                                     </Grid>
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>
-                    </StackPanel>
 
-                    <StackPanel Spacing="16" Visibility="{x:Bind ViewModel.HasSelectedButton, Mode=OneWay}">
-                        <TextBlock Text="按钮详情" Style="{StaticResource SectionHeaderTextBlockStyle}"/>
-                        <Grid RowSpacing="12" ColumnSpacing="12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="160"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="名称" Style="{StaticResource FormLabelTextBlockStyle}"/>
-                            <TextBox Grid.Row="0" Grid.Column="1" Text="{x:Bind ViewModel.SelectedButton.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="描述" Style="{StaticResource FormLabelTextBlockStyle}"/>
-                            <TextBox Grid.Row="1" Grid.Column="1" Text="{x:Bind ViewModel.SelectedButton.Description, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Icon Type" VerticalAlignment="Center"/>
-                            <ComboBox Grid.Row="2" Grid.Column="1" SelectedIndex="{x:Bind ViewModel.SelectedButton.IconTypeIndex, Mode=TwoWay}">
-                                <ComboBoxItem Content="Glyph"/>
-                                <ComboBoxItem Content="Image"/>
+                    <!-- Button detail cards -->
+                    <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.HasSelectedButton, Mode=OneWay}">
+                        <tkcontrols:SettingsCard Header="Button Name">
+                            <TextBox Text="{x:Bind ViewModel.SelectedButton.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </tkcontrols:SettingsCard>
+                        <tkcontrols:SettingsCard Header="Description">
+                            <TextBox Text="{x:Bind ViewModel.SelectedButton.Description, Mode=TwoWay}" />
+                        </tkcontrols:SettingsCard>
+                        <tkcontrols:SettingsCard Header="Icon Type">
+                            <ComboBox SelectedIndex="{x:Bind ViewModel.SelectedButton.IconTypeIndex, Mode=TwoWay}">
+                                <ComboBoxItem Content="Glyph" />
+                                <ComboBoxItem Content="Image" />
                             </ComboBox>
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Glyph" Style="{StaticResource FormLabelTextBlockStyle}"/>
-                            <Grid Grid.Row="3" Grid.Column="1">
+                        </tkcontrols:SettingsCard>
+                        <tkcontrols:SettingsCard Header="Glyph">
+                            <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="48" />
                                 </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" Text="{x:Bind ViewModel.SelectedButton.IconGlyph, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                <Border Grid.Column="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="0,4,4,0">
-                                    <TextBlock Text="{x:Bind ViewModel.SelectedButton.IconGlyph}" FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="0" Text="{x:Bind ViewModel.SelectedButton.IconGlyph, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <Border Grid.Column="1" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Margin="8,0,0,0">
+                                    <TextBlock Text="{x:Bind ViewModel.SelectedButton.IconGlyph}" FontFamily="Segoe MDL2 Assets" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
                             </Grid>
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="图片路径" Style="{StaticResource FormLabelTextBlockStyle}"/>
-                            <Grid Grid.Row="4" Grid.Column="1">
+                        </tkcontrols:SettingsCard>
+                        <tkcontrols:SettingsCard Header="Image Path">
+                            <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" Text="{x:Bind ViewModel.SelectedButton.IconPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                <Button Grid.Column="1" Content="浏览" Click="OnBrowseIcon" Tag="{x:Bind ViewModel.SelectedButton}" Margin="8,0,0,0"/>
+                                <TextBox Grid.Column="0" Text="{x:Bind ViewModel.SelectedButton.IconPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <Button Grid.Column="1" Content="Browse" Click="OnBrowseIcon" Tag="{x:Bind ViewModel.SelectedButton}" />
                             </Grid>
-                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Command" Style="{StaticResource FormLabelTextBlockStyle}"/>
-                            <TextBox Grid.Row="5" Grid.Column="1" Text="{x:Bind ViewModel.SelectedButton.Action.Command, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Arguments" Style="{StaticResource FormLabelTextBlockStyle}"/>
-                            <TextBox Grid.Row="6" Grid.Column="1" Text="{x:Bind ViewModel.SelectedButton.Action.Arguments, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="7" Grid.Column="0" Text="工作目录" Style="{StaticResource FormLabelTextBlockStyle}"/>
-                            <TextBox Grid.Row="7" Grid.Column="1" Text="{x:Bind ViewModel.SelectedButton.Action.WorkingDirectory, Mode=TwoWay}"/>
-                        </Grid>
+                        </tkcontrols:SettingsCard>
+                        <tkcontrols:SettingsCard Header="Command">
+                            <TextBox Text="{x:Bind ViewModel.SelectedButton.Action.Command, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </tkcontrols:SettingsCard>
+                        <tkcontrols:SettingsCard Header="Arguments">
+                            <TextBox Text="{x:Bind ViewModel.SelectedButton.Action.Arguments, Mode=TwoWay}" />
+                        </tkcontrols:SettingsCard>
+                        <tkcontrols:SettingsCard Header="Working Directory">
+                            <TextBox Text="{x:Bind ViewModel.SelectedButton.Action.WorkingDirectory, Mode=TwoWay}" />
+                        </tkcontrols:SettingsCard>
                     </StackPanel>
 
-                    <TextBlock Text="请选择一个分组进行配置" Visibility="{x:Bind ViewModel.HasNoSelectedGroup, Mode=OneWay}" HorizontalAlignment="Center"/>
+                    <StackPanel Visibility="{x:Bind ViewModel.HasNoSelectedGroup, Mode=OneWay}" HorizontalAlignment="Center" Margin="0,60,0,0" Spacing="12">
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE713;" FontSize="42" Opacity="0.25" />
+                        <TextBlock Text="Select a group to configure" Opacity="0.6" />
+                    </StackPanel>
                 </StackPanel>
+                </Border>
             </ScrollViewer>
         </Grid>
     </Grid>
