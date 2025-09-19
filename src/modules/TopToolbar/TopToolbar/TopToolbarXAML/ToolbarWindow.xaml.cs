@@ -50,6 +50,10 @@ namespace TopToolbar
         private Border _toolbarContainer;
         private ScrollViewer _scrollViewer;
         private FileSystemWatcher _configWatcher;
+        private IntPtr _oldWndProc;
+        private DpiWndProcDelegate _newWndProc;
+
+        private delegate IntPtr DpiWndProcDelegate(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
         public ToolbarWindow()
         {
@@ -59,26 +63,10 @@ namespace TopToolbar
             _providerService = new ActionProviderService(_providerRuntime);
             _actionExecutor = new ToolbarActionExecutor(_providerService, _contextFactory);
             _vm = new ToolbarViewModel(_configService, _providerService, _contextFactory);
+            EnsurePerMonitorV2();
             RegisterProviders();
 
-            _store.StoreChanged += (s, e) =>
-            {
-                // If a partial update just occurred, suppress immediate full rebuild to avoid duplicate visuals.
-                if (Environment.TickCount - _lastPartialUpdateTick < 50)
-                {
-                    return;
-                }
-
-                try
-                {
-                    BuildToolbarFromStore();
-                    ResizeToContent();
-                }
-                catch
-                {
-                }
-            };
-
+            // Legacy _store.StoreChanged full rebuild removed; we now rely solely on detailed events.
             _store.StoreChangedDetailed += (s, e) =>
             {
                 try
@@ -187,6 +175,7 @@ namespace TopToolbar
                     _hwnd = this.GetWindowHandle();
                     ApplyTransparentBackground();
                     ApplyFramelessStyles();
+                    TryHookDpiMessages();
                     ResizeToContent();
                     PositionAtTopCenter();
                     AppWindow.Hide();
@@ -290,8 +279,10 @@ namespace TopToolbar
             {
                 Name = "ToolbarContainer",
                 CornerRadius = new CornerRadius(12),
+
+                // Updated per user request: light semi-transparent gray
                 Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
-                    Windows.UI.Color.FromArgb(255, 255, 255, 255)),
+                    Windows.UI.Color.FromArgb(0xCC, 0xF0, 0xF0, 0xF0)), // #CCF0F0F0 (~80% opacity light gray)
                 Height = 75,
                 Padding = new Thickness(12, 6, 12, 6),
                 VerticalAlignment = VerticalAlignment.Center, // Back to center
@@ -409,6 +400,7 @@ namespace TopToolbar
             }
         }
 
+        // Transitional full rebuild method (will be replaced by ItemsRepeater binding in Phase 2)
         private void BuildToolbarFromStore()
         {
             StackPanel mainStack = (_toolbarContainer?.Child as ScrollViewer)?.Content as StackPanel
@@ -435,7 +427,9 @@ namespace TopToolbar
                 var groupContainer = new Border
                 {
                     CornerRadius = new CornerRadius(15),
-                    Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(10, 0, 0, 0)),
+
+                    // Default fully transparent so it doesn't show until hover
+                    Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0)),
                     Padding = new Thickness(4, 2, 4, 2),
                     Margin = new Thickness(2, 0, 2, 0),
                     Tag = group.Id,
@@ -444,6 +438,43 @@ namespace TopToolbar
                 var groupShadow = new Microsoft.UI.Xaml.Media.ThemeShadow();
                 groupContainer.Shadow = groupShadow;
                 groupContainer.Translation = new System.Numerics.Vector3(0, 0, 1);
+
+                // Group hover background highlight (keeps button animations intact)
+                groupContainer.PointerEntered += (s, e) =>
+                {
+                    try
+                    {
+                        if (groupContainer.Background is Microsoft.UI.Xaml.Media.SolidColorBrush b)
+                        {
+                            // Light gray hover background (slightly translucent)
+                            b.Color = Windows.UI.Color.FromArgb(40, 0, 0, 0); // alpha 40 ~ 16% dark overlay
+                        }
+                        else
+                        {
+                            groupContainer.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(40, 0, 0, 0));
+                        }
+                    }
+                    catch
+                    {
+                    }
+                };
+                groupContainer.PointerExited += (s, e) =>
+                {
+                    try
+                    {
+                        if (groupContainer.Background is Microsoft.UI.Xaml.Media.SolidColorBrush b)
+                        {
+                            b.Color = Windows.UI.Color.FromArgb(0, 0, 0, 0); // back to transparent
+                        }
+                        else
+                        {
+                            groupContainer.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
+                        }
+                    }
+                    catch
+                    {
+                    }
+                };
 
                 var groupPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2 };
                 foreach (var btn in enabledButtons)
@@ -652,6 +683,18 @@ namespace TopToolbar
 
                         var bmp = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage();
                         bmp.UriSource = imgUri;
+                        try
+                        {
+                            // Scale decode size to current DPI to avoid OS bitmap stretch blur
+                            var dpi = GetDpiForWindow(_hwnd != IntPtr.Zero ? _hwnd : this.GetWindowHandle());
+                            var scale = dpi / 96.0;
+                            bmp.DecodePixelWidth = (int)Math.Round(16 * scale);
+                            bmp.DecodePixelHeight = (int)Math.Round(16 * scale);
+                        }
+                        catch
+                        {
+                        }
+
                         return new Image
                         {
                             Width = 16,
@@ -823,6 +866,7 @@ namespace TopToolbar
         }
 
         // Build or replace a single group's visual container in-place; falls back to full rebuild if structure missing.
+        // Transitional incremental update path prior to full data binding migration
         private void BuildOrReplaceSingleGroup(string groupId)
         {
             if (string.IsNullOrWhiteSpace(groupId))
@@ -869,7 +913,9 @@ namespace TopToolbar
             Border newContainer = new Border
             {
                 CornerRadius = new CornerRadius(15),
-                Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(10, 0, 0, 0)),
+
+                // Default transparent; hover will apply highlight
+                Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0)),
                 Padding = new Thickness(4, 2, 4, 2),
                 Margin = new Thickness(2, 0, 2, 0),
                 Tag = group.Id,
@@ -877,6 +923,42 @@ namespace TopToolbar
             var groupShadow = new Microsoft.UI.Xaml.Media.ThemeShadow();
             newContainer.Shadow = groupShadow;
             newContainer.Translation = new System.Numerics.Vector3(0, 0, 1);
+
+            // Group hover background highlight (incremental path)
+            newContainer.PointerEntered += (s, e) =>
+            {
+                try
+                {
+                    if (newContainer.Background is Microsoft.UI.Xaml.Media.SolidColorBrush b)
+                    {
+                        b.Color = Windows.UI.Color.FromArgb(40, 0, 0, 0);
+                    }
+                    else
+                    {
+                        newContainer.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(40, 0, 0, 0));
+                    }
+                }
+                catch
+                {
+                }
+            };
+            newContainer.PointerExited += (s, e) =>
+            {
+                try
+                {
+                    if (newContainer.Background is Microsoft.UI.Xaml.Media.SolidColorBrush b)
+                    {
+                        b.Color = Windows.UI.Color.FromArgb(0, 0, 0, 0);
+                    }
+                    else
+                    {
+                        newContainer.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
+                    }
+                }
+                catch
+                {
+                }
+            };
 
             var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2 };
             foreach (var btn in enabledButtons)
@@ -952,6 +1034,8 @@ namespace TopToolbar
         {
             var displayArea = DisplayArea.GetFromWindowId(this.AppWindow.Id, DisplayAreaFallback.Primary);
             var workArea = displayArea.WorkArea;
+
+            // Work area coordinates are already in effective (DIP) on WinUI 3; keep logic but centralize for clarity
             int width = this.AppWindow.Size.Width;
             int height = this.AppWindow.Size.Height;
             int x = workArea.X + ((workArea.Width - width) / 2);
@@ -1000,17 +1084,80 @@ namespace TopToolbar
             _isVisible = true;
 
             // Reposition to current monitor top edge
-            GetCursorPos(out var pt);
-            var da = DisplayArea.GetFromPoint(new Windows.Graphics.PointInt32(pt.X, pt.Y), DisplayAreaFallback.Primary);
+            GetCursorPos(out var ptPx);
+            var da = DisplayArea.GetFromPoint(new Windows.Graphics.PointInt32(ptPx.X, ptPx.Y), DisplayAreaFallback.Primary);
             var work = da.WorkArea;
             var size = AppWindow.Size;
             int x = work.X + ((work.Width - size.Width) / 2);
             int y = work.Y; // flush with top
-
             AppWindow.Move(new Windows.Graphics.PointInt32(x, y));
             AppWindow.Show(false); // show without activation
             MakeTopMost();
         }
+
+        // Helper: convert raw pixel to DIP relative to window DPI (if needed later for precise placement)
+        private double PxToDip(int px)
+        {
+            var dpi = GetDpiForWindow(_hwnd != IntPtr.Zero ? _hwnd : this.GetWindowHandle());
+            return (double)px * 96.0 / dpi;
+        }
+
+        private void EnsurePerMonitorV2()
+        {
+            try
+            {
+                // Attempt to set per-monitor V2 awareness at runtime (harmless if already set via manifest)
+                SetProcessDpiAwarenessContext(new IntPtr(-4)); // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 constant
+            }
+            catch
+            {
+            }
+        }
+
+        private void TryHookDpiMessages()
+        {
+            try
+            {
+                if (_hwnd == IntPtr.Zero)
+                {
+                    return;
+                }
+
+                _newWndProc = DpiWndProc; // keep delegate alive
+                _oldWndProc = SetWindowLongPtr(_hwnd, -4, Marshal.GetFunctionPointerForDelegate(_newWndProc)); // GWL_WNDPROC = -4
+            }
+            catch
+            {
+            }
+        }
+
+        private IntPtr DpiWndProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam)
+        {
+            const int WM_DPICHANGED = 0x02E0;
+            if (msg == WM_DPICHANGED)
+            {
+                // lParam points to a RECT in new DPI suggested size/pos
+                try
+                {
+                    BuildToolbarFromStore();
+                    ResizeToContent();
+                }
+                catch
+                {
+                }
+            }
+
+            return CallWindowProc(_oldWndProc, hWnd, msg, wParam, lParam);
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        private static extern bool SetProcessDpiAwarenessContext(IntPtr dpiContext);
 
         private void HideToolbar(bool initial = false)
         {
