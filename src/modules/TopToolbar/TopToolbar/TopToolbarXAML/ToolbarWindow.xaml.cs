@@ -73,6 +73,8 @@ namespace TopToolbar
                 {
                     if (e == null || e.Kind == TopToolbar.Stores.StoreChangeKind.Reset || string.IsNullOrWhiteSpace(e.GroupId))
                     {
+                        // Rehook all groups (in case of reset) then rebuild
+                        HookAllGroupsForEnabledChanges();
                         BuildToolbarFromStore();
                         ResizeToContent();
                         return;
@@ -83,10 +85,14 @@ namespace TopToolbar
                     {
                         BuildOrReplaceSingleGroup(e.GroupId);
                         _lastPartialUpdateTick = Environment.TickCount;
+
+                        // Ensure hook exists for updated group id
+                        HookGroupForEnabledChanges(e.GroupId);
                     }))
                     {
                         BuildOrReplaceSingleGroup(e.GroupId);
                         _lastPartialUpdateTick = Environment.TickCount;
+                        HookGroupForEnabledChanges(e.GroupId);
                     }
                 }
                 catch
@@ -205,11 +211,68 @@ namespace TopToolbar
                 {
                     SyncStaticGroupsIntoStore();
                     BuildToolbarFromStore();
+                    HookAllGroupsForEnabledChanges();
                     ResizeToContent();
                     PositionAtTopCenter();
                     _builtConfigOnce = true;
                 });
             };
+        }
+
+        // Track which groups we've already hooked to avoid duplicate handlers
+        private readonly HashSet<string> _enabledChangeHooked = new(StringComparer.OrdinalIgnoreCase);
+
+        private void HookAllGroupsForEnabledChanges()
+        {
+            foreach (var g in _store.Groups)
+            {
+                if (g != null)
+                {
+                    HookGroupForEnabledChanges(g.Id);
+                }
+            }
+        }
+
+        private void HookGroupForEnabledChanges(string groupId)
+        {
+            if (string.IsNullOrWhiteSpace(groupId))
+            {
+                return;
+            }
+
+            var group = _store.GetGroup(groupId);
+            if (group == null)
+            {
+                return;
+            }
+
+            if (_enabledChangeHooked.Contains(group.Id))
+            {
+                return; // already hooked
+            }
+
+            group.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(ButtonGroup.IsEnabled))
+                {
+                    try
+                    {
+                        if (!DispatcherQueue.TryEnqueue(() =>
+                        {
+                            BuildToolbarFromStore();
+                            ResizeToContent();
+                        }))
+                        {
+                            BuildToolbarFromStore();
+                            ResizeToContent();
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+            };
+            _enabledChangeHooked.Add(group.Id);
         }
 
         private void RegisterProviders()
@@ -882,9 +945,9 @@ namespace TopToolbar
             }
 
             var group = _store.Groups.FirstOrDefault(g => string.Equals(g.Id, groupId, StringComparison.OrdinalIgnoreCase));
-            if (group == null)
+            if (group == null || !group.IsEnabled)
             {
-                // Removed group: trigger full rebuild to also clean separators coherently.
+                // Removed or disabled group: trigger full rebuild to also clean separators coherently.
                 BuildToolbarFromStore();
                 ResizeToContent();
                 return;

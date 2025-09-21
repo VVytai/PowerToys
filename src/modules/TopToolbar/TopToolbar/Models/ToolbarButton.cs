@@ -42,6 +42,9 @@ public class ToolbarButton : INotifyPropertyChanged
             {
                 _name = value ?? string.Empty;
                 OnPropertyChanged();
+
+                // Also notify DisplayName since it depends on Name
+                OnPropertyChanged(nameof(DisplayName));
             }
         }
     }
@@ -57,6 +60,7 @@ public class ToolbarButton : INotifyPropertyChanged
             {
                 _description = value ?? string.Empty;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(HasDescription));
             }
         }
     }
@@ -304,4 +308,11 @@ public class ToolbarButton : INotifyPropertyChanged
         clone.SortOrder = SortOrder;
         return clone;
     }
+
+    // Computed / convenience properties (not serialized)
+    [JsonIgnore]
+    public string DisplayName => string.IsNullOrWhiteSpace(Name) ? "New Button" : Name;
+
+    [JsonIgnore]
+    public bool HasDescription => !string.IsNullOrWhiteSpace(Description);
 }
